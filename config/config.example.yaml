@@ -1,0 +1,68 @@
+# auto-trade-system 設定ファイル
+# コピーして config/config.yaml として使用してください(config.yaml は .gitignore 対象外なので
+# 秘密情報は書かず、APIパスワードは必ず .env 側で管理してください)。
+
+# 実行環境: verification(検証・ポート18081) / production(本番・ポート18080)
+# 本番は必ず検証環境で十分に動作確認してから切り替えること。
+environment: verification
+
+# environment: production を実際に有効化するための二重確認フラグ。
+# false のままだと --env production を指定しても起動時にエラーで停止する。
+confirm_live_trading: false
+
+kabu_station:
+  host: "localhost"
+  # ポートは environment から自動決定(verification=18081 / production=18080)。
+  # kabuステーション側で待受ポートを変更している場合のみ上書きする。
+  port_override: null
+
+account:
+  # 2=一般 4=特定 12=法人
+  account_type: 4
+
+# 監視銘柄(REST/PUSH合計で最大50銘柄という制約に注意)
+watchlist:
+  - symbol: "7203"   # トヨタ自動車
+    exchange: 1
+  - symbol: "9433"   # KDDI
+    exchange: 1
+  - symbol: "8306"   # 三菱UFJフィナンシャル・グループ
+    exchange: 1
+
+strategy:
+  name: ma_cross
+  bar_interval_sec: 60    # 自前で組み立てる分足バーの周期(秒)
+  fast_period: 5
+  slow_period: 25
+  warmup_bars: 30          # この本数のバーが揃うまではシグナルを出さない
+
+risk:
+  # 1トレードあたり、信用余力に対する上限比率(%)
+  max_capital_per_trade_pct: 10.0
+  # 口座全体での最大同時建玉数
+  max_concurrent_positions: 3
+  # 銘柄ごとの最大建玉数
+  max_positions_per_symbol: 1
+  # 建玉に対する損切り/利確ライン(%)
+  stop_loss_pct: 1.5
+  take_profit_pct: 3.0
+  # その日の実現損益がこれを下回ったら新規建玉を停止(返済のみ許可)。単位: 円
+  max_daily_loss_jpy: 30000
+  # 指値新規注文が約定しない場合に自動取消するまでの秒数
+  entry_order_timeout_sec: 30
+
+schedule:
+  # 東証の取引時間(前場9:00-11:30, 後場12:30-15:00)を想定
+  session_start: "09:00"
+  session_end: "15:00"
+  # 一般信用デイトレのため、この時刻になったら残建玉を成行で強制返済する
+  force_flatten_time: "14:55"
+  # メインループの状態同期(注文/建玉/信用余力)ポーリング間隔(秒)
+  poll_interval_sec: 5
+
+logging:
+  level: INFO
+  file: "logs/autotrade.log"
+
+state:
+  db_path: "logs/state.db"

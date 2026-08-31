@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# secrets
+.env
+
+# local state / logs
+logs/
+*.db
+*.sqlite3
+
+.pytest_cache/
+.mypy_cache/
+.DS_Store

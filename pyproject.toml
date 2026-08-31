@@ -1,0 +1,36 @@
+[project]
+name = "auto-trade-system"
+version = "0.1.0"
+description = "kabuステーションAPI(三菱UFJ eスマート証券)を用いた日本株信用取引(一般信用デイトレード)の自動売買システム"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "requests>=2.31",
+    "websocket-client>=1.7",
+    "pandas>=2.0",
+    "PyYAML>=6.0",
+    "python-dotenv>=1.0",
+    "tenacity>=8.2",
+    "jpholiday>=0.1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "freezegun>=1.4",
+]
+
+[project.scripts]
+autotrade = "autotrade.main:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
