@@ -49,10 +49,24 @@ def main() -> int:
         print(f"✘ 信用余力の取得に失敗しました: {exc}", file=sys.stderr)
         return 1
 
+    # 銘柄登録をしないと板情報の各値がnullで返ってくることがあるため、先に登録する。
+    try:
+        client.register_symbols(settings.watchlist)
+        print(f"✔ 銘柄登録に成功しました({len(settings.watchlist)}銘柄)。")
+    except KabuApiError as exc:
+        print(f"✘ 銘柄登録に失敗しました: {exc}", file=sys.stderr)
+
     for spec in settings.watchlist:
         try:
             board = client.get_board(spec.symbol, int(spec.exchange))
-            print(f"✔ {spec.symbol} 現在値: {board.get('CurrentPrice')}")
+            price = board.get("CurrentPrice")
+            if price is None:
+                print(
+                    f"△ {spec.symbol} 現在値: None(登録直後は空のことがあります。"
+                    "少し待って再実行するか、取引時間内かどうかを確認してください)"
+                )
+            else:
+                print(f"✔ {spec.symbol} 現在値: {price}")
         except KabuApiError as exc:
             print(f"✘ {spec.symbol} の板情報取得に失敗しました: {exc}", file=sys.stderr)
 
