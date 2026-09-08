@@ -13,7 +13,7 @@ import logging
 import signal
 import sys
 import time
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from autotrade.config import ConfigError, Environment, Settings, load_settings
@@ -28,6 +28,8 @@ from autotrade.strategy.ma_cross import MovingAverageCrossStrategy
 from autotrade.trading_calendar import TradingCalendar
 
 logger = logging.getLogger(__name__)
+
+HEARTBEAT_INTERVAL_SEC = 60  # 「生きています」ログを出す間隔
 
 
 def build_strategy(settings: Settings):
@@ -73,6 +75,7 @@ class TradingApp:
 
         self._current_trading_day: Optional[date] = None
         self._stop = False
+        self._last_heartbeat: Optional[datetime] = None
 
     # ------------------------------------------------------------------
     def _on_bar_closed(self, bar: Bar) -> None:
@@ -116,6 +119,28 @@ class TradingApp:
                 exchange = self.symbol_to_exchange[tracked.symbol]
                 self.order_manager.close_position(tracked, exchange=exchange, reason=decision.reason)
 
+    def _maybe_log_heartbeat(self, now: datetime) -> None:
+        """一定間隔で「動いていますよ」というログを出す。
+
+        シグナルが出ない間はログが一切流れず、動作しているのか
+        止まっているのか分かりにくいための対策。
+        """
+        if self._last_heartbeat is not None and (now - self._last_heartbeat).total_seconds() < HEARTBEAT_INTERVAL_SEC:
+            return
+        self._last_heartbeat = now
+
+        bar_counts = {s.symbol: len(self.market_data.get_bars_df(s.symbol)) for s in self.settings.watchlist}
+        latest_prices = {s.symbol: self.market_data.latest_price(s.symbol) for s in self.settings.watchlist}
+        open_positions = len(self.order_manager.open_tracked_positions())
+        logger.info(
+            "生存確認: 時刻=%s 市場オープン中=%s 保有建玉数=%s バー本数=%s 現在値=%s",
+            now.strftime("%H:%M:%S"),
+            self.calendar.is_market_open(now),
+            open_positions,
+            bar_counts,
+            latest_prices,
+        )
+
     def _maybe_roll_trading_day(self) -> None:
         today = self.calendar.now().date()
         if self._current_trading_day != today:
@@ -141,6 +166,7 @@ class TradingApp:
             while not self._stop:
                 self._maybe_roll_trading_day()
                 now = self.calendar.now()
+                self._maybe_log_heartbeat(now)
 
                 if not self.calendar.is_trading_day(now):
                     time.sleep(min(self.settings.schedule.poll_interval_sec * 60, 3600))
