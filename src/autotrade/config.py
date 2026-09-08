@@ -113,11 +113,17 @@ def load_settings(
     config_path: str | Path,
     env_override: Optional[str] = None,
     dotenv_path: Optional[str | Path] = None,
+    require_live_confirmation: bool = True,
 ) -> Settings:
     """設定YAMLと.envを読み込み Settings を構築する。
 
     env_override が指定された場合、YAML の environment より優先される
     (例: CLI の `--env production`)。
+
+    require_live_confirmation: True の場合、production を使うには
+    confirm_live_trading: true が必須(誤発注防止の安全装置)。
+    scripts/check_connection.py のような「発注を一切行わない読み取り専用」の
+    ツールでは False を渡してこのチェックをスキップできる。
     """
     load_dotenv(dotenv_path) if dotenv_path else load_dotenv()
 
@@ -136,7 +142,7 @@ def load_settings(
         raise ConfigError(f"environment は 'verification' か 'production' を指定してください: {env_name}") from exc
 
     confirm_live_trading = bool(raw.get("confirm_live_trading", False))
-    if environment is Environment.PRODUCTION and not confirm_live_trading:
+    if require_live_confirmation and environment is Environment.PRODUCTION and not confirm_live_trading:
         raise ConfigError(
             "environment: production を使うには config の confirm_live_trading を true にする必要があります。"
             " 誤発注防止のための安全装置です。検証環境で十分に確認してから切り替えてください。"

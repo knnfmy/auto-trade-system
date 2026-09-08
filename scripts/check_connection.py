@@ -3,10 +3,13 @@
 
 kabuステーションを起動した状態のPCで実行する。
 トークン取得 → 信用余力取得 → 監視銘柄の板情報取得、まで行い、
-実際の発注は一切行わない。
+実際の発注は一切行わない(sendorder/cancelorderを呼び出すコードはこのファイルに
+存在しない)。読み取り専用のため、--env production を指定しても
+confirm_live_trading の設定に関わらず実行できる(発注しないので安全)。
 
 使い方:
     python scripts/check_connection.py --config config/config.yaml --env verification
+    python scripts/check_connection.py --config config/config.yaml --env production
 """
 from __future__ import annotations
 
@@ -26,7 +29,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        settings = load_settings(args.config, env_override=args.env)
+        settings = load_settings(args.config, env_override=args.env, require_live_confirmation=False)
     except ConfigError as exc:
         print(f"設定エラー: {exc}", file=sys.stderr)
         return 1

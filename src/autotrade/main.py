@@ -22,7 +22,6 @@ from autotrade.logging_setup import setup_logging
 from autotrade.market_data import MarketDataService
 from autotrade.models import Bar, Exchange, Signal
 from autotrade.order_manager import OrderManager
-from autotrade.rate_limiter import RateLimiter
 from autotrade.risk import RiskManager
 from autotrade.state_store import StateStore
 from autotrade.strategy.ma_cross import MovingAverageCrossStrategy
@@ -45,11 +44,7 @@ class TradingApp:
         self.settings = settings
         self.dry_run = dry_run
 
-        self.client = KabuClient(
-            base_url=settings.base_url,
-            api_password=settings.api_password,
-            rate_limiter=RateLimiter(max_per_sec=8.0),
-        )
+        self.client = KabuClient(base_url=settings.base_url, api_password=settings.api_password)
         self.state_store = StateStore(settings.state.db_path)
         self.risk = RiskManager(settings.risk, self.state_store)
         self.strategy = build_strategy(settings)

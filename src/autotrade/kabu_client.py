@@ -54,12 +54,16 @@ class KabuClient:
         api_password: str,
         session: Optional[requests.Session] = None,
         rate_limiter: Optional[RateLimiter] = None,
+        order_rate_limiter: Optional[RateLimiter] = None,
         timeout: float = 10.0,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self._api_password = api_password
         self._session = session or requests.Session()
-        self._rate_limiter = rate_limiter or RateLimiter()
+        # 公式の流量制限: 発注系(/sendorder, /cancelorder)は5件/秒、それ以外は10件/秒。
+        # 安全マージンを取り、それぞれ少し低めの値をデフォルトにする。
+        self._rate_limiter = rate_limiter or RateLimiter(max_per_sec=8.0)
+        self._order_rate_limiter = order_rate_limiter or RateLimiter(max_per_sec=4.0)
         self._timeout = timeout
         self._token: Optional[str] = None
         self._token_lock = threading.Lock()
@@ -103,7 +107,10 @@ class KabuClient:
         json_body: Optional[dict] = None,
         _retried_auth: bool = False,
     ) -> Any:
-        self._rate_limiter.acquire()
+        if path.startswith("/sendorder") or path.startswith("/cancelorder"):
+            self._order_rate_limiter.acquire()
+        else:
+            self._rate_limiter.acquire()
         token = self.get_token()
         headers = {"X-API-KEY": token}
         resp = self._session.request(
